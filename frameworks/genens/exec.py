@@ -1,7 +1,9 @@
 import logging
 import os
+import numpy as np
 import pickle
 import pprint
+import random
 import sys
 import tempfile as tmp
 
@@ -61,12 +63,21 @@ def run(dataset: Dataset, config: TaskConfig):
     training_params = {k: v for k, v in config.framework_params.items() if not k.startswith('_')}
     n_jobs = config.framework_params.get('_n_jobs', config.cores)  # useful to disable multicore, regardless of the dataset config
 
+    runtime_s = config.max_runtime_seconds
+    runtime_s -= 5 * 60  # avoid premature process termination
+    print(f"Setting time limit to {runtime_s} minutes.")
+
     log.info('Running genens with a maximum time of %ss on %s cores, optimizing %s.',
-             config.max_runtime_seconds, n_jobs, scoring_metric)
+             runtime_s, n_jobs, scoring_metric)
+
+    if config.seed is not None:
+        # random state is yet to be unified in genens
+        np.random.seed(config.seed)
+        random.seed(config.seed)
 
     estimator = GenensClassifier if is_classification else GenensRegressor
     genens_est = estimator(n_jobs=n_jobs,
-                           max_evo_seconds=config.max_runtime_seconds - 2,
+                           max_evo_seconds=runtime_s,
                            scorer=scoring_metric,
                            # random_state=config.seed,
                            **training_params)
