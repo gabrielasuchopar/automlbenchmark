@@ -91,7 +91,7 @@ TPOT:
 genens:
   version: '0.2'
   params:
-    #_sample_size: 0.25
+    _sample_size: 0.25
     timeout: 120
     max_height: 5
     max_arity: 3
