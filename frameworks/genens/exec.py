@@ -71,7 +71,7 @@ def run(dataset: Dataset, config: TaskConfig):
 
     runtime_s = config.max_runtime_seconds
     runtime_s -= 5 * 60  # avoid premature process termination
-    print(f"Setting time limit to {runtime_s} minutes.")
+    print(f"Setting time limit to {runtime_s} seconds.")
 
     log.info('Running genens with a maximum time of %ss on %s cores, optimizing %s.',
              runtime_s, n_jobs, scoring_metric)
