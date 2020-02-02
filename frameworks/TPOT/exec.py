@@ -54,6 +54,8 @@ def run(dataset: Dataset, config: TaskConfig):
     print(f"Setting time limit to {runtime_min} minutes.")
 
     estimator = TPOTClassifier if is_classification else TPOTRegressor
+
+    print(f'Training params: {training_params}')
     tpot = estimator(n_jobs=n_jobs,
                      max_time_mins=runtime_min,
                      scoring=scoring_metric,

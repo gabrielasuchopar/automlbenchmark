@@ -82,13 +82,22 @@ ranger:
 TPOT:
   version: '0.9.6'
   project: https://github.com/EpistasisLab/tpot
-#  params:
+  params:
+    subsample: 0.25
 #    max_eval_time_mins: 2
 #    population_size: 25
 #    verbosity: 2
 
 genens:
   version: '0.2'
+  params:
+    _sample_size: 0.25
+    timeout: 120
+    max_height: 5
+    max_arity: 3
+    hc_n_nodes: 3
+    hc_keep_last: false
+    hc_mut_pb: 0.2
 
 autoxgboost:
   version: '0.0.0.9000'

@@ -9,6 +9,7 @@ import tempfile as tmp
 
 from genens.render.graph import create_graph
 from genens.render.plot import export_plot
+from genens.workflow.evaluate import SampleCrossValEvaluator
 
 if sys.platform == 'darwin':
     os.environ['OBJC_DISABLE_INITIALIZE_FORK_SAFETY'] = 'YES'
@@ -63,6 +64,11 @@ def run(dataset: Dataset, config: TaskConfig):
     training_params = {k: v for k, v in config.framework_params.items() if not k.startswith('_')}
     n_jobs = config.framework_params.get('_n_jobs', config.cores)  # useful to disable multicore, regardless of the dataset config
 
+    sample_size = config.framework_params.get('_sample_size', None)
+    if sample_size is not None:
+        evaluator = SampleCrossValEvaluator(sample_size=sample_size, per_gen=True, cv_k=5)
+        training_params['evaluator'] = evaluator
+
     runtime_s = config.max_runtime_seconds
     runtime_s -= 5 * 60  # avoid premature process termination
     print(f"Setting time limit to {runtime_s} minutes.")
@@ -74,6 +80,8 @@ def run(dataset: Dataset, config: TaskConfig):
         # random state is yet to be unified in genens
         np.random.seed(config.seed)
         random.seed(config.seed)
+
+    print(f'Training params: {training_params}')
 
     estimator = GenensClassifier if is_classification else GenensRegressor
     genens_est = estimator(n_jobs=n_jobs,
