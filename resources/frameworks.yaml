@@ -95,10 +95,11 @@ genens:
     timeout: 120
     max_height: 5
     max_arity: 3
-    hc_repeat: 3
+    hc_repeat: 4
     hc_n_nodes: 3
     hc_keep_last: false
     hc_mut_pb: 0.2
+    _save_artifacts: ['log', 'models']
 
 autoxgboost:
   version: '0.0.0.9000'
