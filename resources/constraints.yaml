@@ -5,6 +5,11 @@ test:
   max_runtime_seconds: 600
   cores: 4
 
+1h4c_once:
+  folds: 1
+  max_runtime_seconds: 3600
+  cores: 8
+
 1h4c:
   folds: 10
   max_runtime_seconds: 3600

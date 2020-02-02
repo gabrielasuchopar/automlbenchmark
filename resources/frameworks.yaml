@@ -87,6 +87,9 @@ TPOT:
 #    population_size: 25
 #    verbosity: 2
 
+genens:
+  version: '0.2'
+
 autoxgboost:
   version: '0.0.0.9000'
   project: https://github.com/ja-thomas/autoxgboost

@@ -49,7 +49,9 @@ def run(dataset: Dataset, config: TaskConfig):
 
     log.info('Running TPOT with a maximum time of %ss on %s cores, optimizing %s.',
              config.max_runtime_seconds, n_jobs, scoring_metric)
-    runtime_min = (config.max_runtime_seconds/60)
+    runtime_min = (config.max_runtime_seconds / 60)
+    runtime_min -= 5  # avoid premature process termination
+    print(f"Setting time limit to {runtime_min} minutes.")
 
     estimator = TPOTClassifier if is_classification else TPOTRegressor
     tpot = estimator(n_jobs=n_jobs,

@@ -1,8 +1,12 @@
 import logging
 import os
+import pickle
 import pprint
 import sys
 import tempfile as tmp
+
+from genens.render.graph import create_graph
+from genens.render.plot import export_plot
 
 if sys.platform == 'darwin':
     os.environ['OBJC_DISABLE_INITIALIZE_FORK_SAFETY'] = 'YES'
@@ -20,6 +24,8 @@ from amlb.data import Dataset
 from amlb.datautils import Encoder, impute
 from amlb.results import save_predictions_to_file
 from amlb.utils import Timer, touch
+
+from typing import Union
 
 
 log = logging.getLogger(__name__)
@@ -85,11 +91,11 @@ def run(dataset: Dataset, config: TaskConfig):
                              truth=y_test,
                              target_is_encoded=is_classification)
 
-    #save_artifacts(genens_est, config)
+    save_artifacts(genens_est, config)
 
     # TODO
     return dict(
-        # models_count=len(tpot.evaluated_individuals_),
+        models_count=len(estimator.get_best_pipelines()),
         training_duration=training.duration
     )
 
@@ -100,20 +106,36 @@ def make_subdir(name, config):
     return subdir
 
 
-def save_artifacts(estimator, config):
+def save_artifacts(estimator: Union[GenensClassifier, GenensRegressor], config):
     try:
-        log.debug("All individuals :\n%s", list(estimator.evaluated_individuals_.items()))
-        models = estimator.pareto_front_fitted_pipelines_
-        hall_of_fame = list(zip(reversed(estimator._pareto_front.keys), estimator._pareto_front.items))
         artifacts = config.framework_params.get('_save_artifacts', False)
+
         if 'models' in artifacts:
-            models_file = os.path.join(make_subdir('models', config), 'models.txt')
-            with open(models_file, 'w') as f:
-                for m in hall_of_fame:
-                    pprint.pprint(dict(
-                        fitness=str(m[0]),
-                        model=str(m[1]),
-                        pipeline=models[str(m[1])],
-                    ), stream=f)
+            models_dir = os.path.join(make_subdir('models', config))
+
+            # pickle top 3 best pipelines
+            for i, pipe in enumerate(estimator.get_best_pipelines()):
+                with open(models_dir + '/pipeline{}.pickle'.format(i), 'wb') as pickle_file:
+                    pickle.dump(pipe, pickle_file, pickle.HIGHEST_PROTOCOL)
+
+            # top 3 individual fitness values
+            with open(models_dir + '/ind-fitness.txt', 'w+') as out_file:
+                best_inds = estimator.get_best_pipelines(as_individuals=True)
+
+                for i, ind in enumerate(best_inds):
+                    out_file.write('Individual {}: Score {}\n'.format(i, ind.fitness.values))
+                    # individual tree
+                    create_graph(ind, models_dir + '/graph{}.png'.format(i))
+
+        if 'log' in artifacts:
+            log_dir = os.path.join(make_subdir('logs', config))
+
+            # write logbook string representation to output dir
+            with open(log_dir + '/logbook.txt', 'w+') as log_file:
+                log_file.write(estimator.logbook.__str__() + '\n')
+
+            # evolution plot
+            export_plot(estimator, log_dir + '/result.png')
+
     except:
         log.debug("Error when saving artifacts.", exc_info=True)
