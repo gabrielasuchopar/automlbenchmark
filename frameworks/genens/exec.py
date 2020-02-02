@@ -114,7 +114,7 @@ def run(dataset: Dataset, config: TaskConfig):
 
     # TODO
     return dict(
-        models_count=len(estimator.get_best_pipelines()),
+        models_count=len(genens_est.get_best_pipelines()),
         training_duration=training.duration
     )
 
