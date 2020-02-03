@@ -92,6 +92,7 @@ genens:
   version: '0.2'
   params:
     _sample_size: 0.25
+    n_gen: 20
     timeout: 120
     max_height: 5
     max_arity: 3
@@ -100,6 +101,8 @@ genens:
     hc_keep_last: false
     hc_mut_pb: 0.2
     pop_size: 52
+    mut_multiple_args: true
+    _ens_weight: 2.0
     _save_artifacts: ['log', 'models']
 
 autoxgboost:

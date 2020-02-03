@@ -7,6 +7,7 @@ import random
 import sys
 import tempfile as tmp
 
+from genens.config.clf_stacking import clf_config
 from genens.render.graph import create_graph
 from genens.render.plot import export_plot
 from genens.workflow.evaluate import SampleCrossValEvaluator
@@ -83,8 +84,13 @@ def run(dataset: Dataset, config: TaskConfig):
 
     print(f'Training params: {training_params}')
 
+    node_config = clf_config()
+    node_config.group_weights['ensemble'] = config.framework_params.get('_ens_weight',
+                                                                        node_config.group_weights['ensemble'])
+
     estimator = GenensClassifier if is_classification else GenensRegressor
     genens_est = estimator(n_jobs=n_jobs,
+                           config=node_config,
                            max_evo_seconds=runtime_s,
                            scorer=scoring_metric,
                            # random_state=config.seed,
