@@ -10,7 +10,7 @@ import tempfile as tmp
 from genens.config.clf_stacking import clf_config
 from genens.render.graph import create_graph
 from genens.render.plot import export_plot
-from genens.workflow.evaluate import SampleCrossValEvaluator
+from genens.workflow.evaluate import SampleCrossValEvaluator, CrossValEvaluator
 
 if sys.platform == 'darwin':
     os.environ['OBJC_DISABLE_INITIALIZE_FORK_SAFETY'] = 'YES'
@@ -68,7 +68,11 @@ def run(dataset: Dataset, config: TaskConfig):
     sample_size = config.framework_params.get('_sample_size', None)
     if sample_size is not None:
         evaluator = SampleCrossValEvaluator(sample_size=sample_size, per_gen=True, cv_k=5)
-        training_params['evaluator'] = evaluator
+    else:
+        evaluator = CrossValEvaluator(cv_k=5)
+    print(f'cv_k: {evaluator.cv_k}')
+
+    training_params['evaluator'] = evaluator
 
     runtime_s = config.max_runtime_seconds
     runtime_s -= 5 * 60  # avoid premature process termination
