@@ -21,7 +21,7 @@ os.environ['MKL_NUM_THREADS'] = '1'
 from genens import GenensClassifier, GenensRegressor
 
 from sklearn.metrics import accuracy_score, roc_auc_score, f1_score, log_loss
-from sklearn.metrics import mean_absolute_error, mean_squared_error, mean_squared_log_error, r2_score, make_scorer
+from sklearn.metrics import mean_absolute_error, mean_squared_error, mean_squared_log_error, r2_score, get_scorer
 
 from amlb.benchmark import TaskConfig
 from amlb.data import Dataset
@@ -46,15 +46,16 @@ def run(dataset: Dataset, config: TaskConfig):
 
     # Mapping of benchmark metrics to TPOT metrics
     metrics_mapping = dict(
-        acc=make_scorer(accuracy_score),
-        auc=make_scorer(roc_auc_score),
-        f1=make_scorer(f1_score),
-        logloss=make_scorer(log_loss, greater_is_better=False),
-        mae=make_scorer(mean_absolute_error, greater_is_better=False),
-        mse=make_scorer(mean_squared_error, greater_is_better=False),
-        msle=make_scorer(mean_squared_log_error, greater_is_better=False),
-        r2=make_scorer(r2_score)
+        acc=get_scorer('accuracy'),
+        auc=get_scorer('roc_auc'),
+        f1=get_scorer('f1'),
+        logloss=get_scorer('neg_log_loss'),
+        mae=get_scorer('neg_mean_absolute_error'),
+        mse=get_scorer('neg_mean_squared_error'),
+        msle=get_scorer('neg_mean_squared_log_error'),
+        r2=get_scorer('r2')
     )
+
     scoring_metric = metrics_mapping[config.metric] if config.metric in metrics_mapping else None
     if scoring_metric is None:
         raise ValueError("Performance metric {} not supported.".format(config.metric))
@@ -92,11 +93,13 @@ def run(dataset: Dataset, config: TaskConfig):
     node_config.group_weights['ensemble'] = config.framework_params.get('_ens_weight',
                                                                         node_config.group_weights['ensemble'])
 
+    log_path = config.output_dir + f'/genens_log_{config.name}.txt'
     estimator = GenensClassifier if is_classification else GenensRegressor
     genens_est = estimator(n_jobs=n_jobs,
                            config=node_config,
                            max_evo_seconds=runtime_s,
                            scorer=scoring_metric,
+                           log_path=log_path,
                            # random_state=config.seed,
                            **training_params)
 

@@ -92,7 +92,7 @@ genens:
   version: '0.2'
   params:
     _sample_size: 0.25
-    n_gen: 20
+    n_gen: 30
     timeout: 120
     max_height: 5
     max_arity: 3
