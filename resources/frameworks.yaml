@@ -84,6 +84,7 @@ TPOT:
   project: https://github.com/EpistasisLab/tpot
   params:
     subsample: 0.25
+    _save_artifacts: ['models']
 #    max_eval_time_mins: 2
 #    population_size: 25
 #    verbosity: 2

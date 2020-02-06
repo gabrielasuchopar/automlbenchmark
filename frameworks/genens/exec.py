@@ -110,10 +110,13 @@ def run(dataset: Dataset, config: TaskConfig):
         genens_est.fit(X_train, y_train)
 
     log.info('Predicting on the test set.')
-    predictions = genens_est.predict(X_test)
+
+    best_pipe = genens_est.get_best_pipelines()[0]
+    best_pipe.fit(X_train, y_train)
+
+    predictions = best_pipe.predict(X_test)
 
     try:
-        best_pipe = genens_est.get_best_pipelines()[0]
         probabilities = best_pipe.predict_proba(X_test) if is_classification else None
     except AttributeError:
         target_values_enc = dataset.target.label_encoder.transform(dataset.target.values)
