@@ -66,11 +66,14 @@ def run(dataset: Dataset, config: TaskConfig):
     training_params = {k: v for k, v in config.framework_params.items() if not k.startswith('_')}
     n_jobs = config.framework_params.get('_n_jobs', config.cores)  # useful to disable multicore, regardless of the dataset config
 
-    sample_size = config.framework_params.get('_sample_size', None)
+    # sample_size = config.framework_params.get('_sample_size', None)
+    sample_size = _heuristic_sample_size(X_train.shape[0], X_train.shape[1])
     if sample_size is not None:
         evaluator = SampleCrossValEvaluator(sample_size=sample_size, per_gen=True, cv_k=5)
     else:
         evaluator = CrossValEvaluator(cv_k=5)
+
+    print(f"Chosen sample size: {sample_size}.")
     print(f'cv_k: {evaluator.cv_k}')
 
     training_params['evaluator'] = evaluator
@@ -130,6 +133,25 @@ def run(dataset: Dataset, config: TaskConfig):
         models_count=len(genens_est.get_best_pipelines()),
         training_duration=training.duration
     )
+
+
+def _heuristic_sample_size(n_rows, n_cols):
+    size = n_rows * n_cols
+
+    # 'small' datasets
+    if size < 10000:
+        return None
+
+    if n_rows < 1000:
+        return 0.5
+
+    if n_cols < 100:
+        return 0.25
+
+    if n_cols > 1000:
+        return 0.05
+
+    return 0.1
 
 
 def make_subdir(name, config):

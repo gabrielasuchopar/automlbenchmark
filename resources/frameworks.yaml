@@ -96,12 +96,12 @@ genens:
     timeout: 120
     max_height: 5
     max_arity: 3
-    hc_repeat: 0
+    hc_repeat: 3
     hc_n_nodes: 3
     hc_keep_last: false
     hc_mut_pb: 0.2
     pop_size: 52
-    mut_multiple_args: true
+    mut_multiple_args: false
     _ens_weight: 2.0
     _save_artifacts: ['log', 'models']
 
