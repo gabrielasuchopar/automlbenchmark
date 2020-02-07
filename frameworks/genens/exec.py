@@ -55,7 +55,6 @@ def run(dataset: Dataset, config: TaskConfig):
         msle=get_scorer('neg_mean_squared_log_error'),
         r2=get_scorer('r2')
     )
-
     scoring_metric = metrics_mapping[config.metric] if config.metric in metrics_mapping else None
     if scoring_metric is None:
         raise ValueError("Performance metric {} not supported.".format(config.metric))
@@ -145,16 +144,19 @@ def _heuristic_sample_size(n_rows, n_cols):
     if size < 10000:
         return None
 
-    if n_rows < 1000:
+    # 'medium' datasets
+    if n_rows < 50000 and n_cols < 10:
         return 0.5
 
-    if n_cols < 100:
+    if (n_rows < 25000 and n_cols < 100) or n_cols < 30:
         return 0.25
 
-    if n_cols > 1000:
-        return 0.05
+    # 'large' datasets
+    if (n_rows < 25000 and n_cols < 5000) or n_cols < 100:
+        return 0.1
 
-    return 0.1
+    # 'very large' datasets
+    return 0.05
 
 
 def make_subdir(name, config):

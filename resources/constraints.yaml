@@ -10,6 +10,11 @@ test_quick:
   max_runtime_seconds: 360
   cores: 4
 
+test_longer:
+  folds: 1
+  max_runtime_seconds: 1500
+  cores: 8
+
 2h8c_four:
   folds: 4
   max_runtime_seconds: 7200
