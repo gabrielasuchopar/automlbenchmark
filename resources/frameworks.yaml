@@ -90,7 +90,8 @@ TPOT:
 #    verbosity: 2
 
 genens:
-  version: '0.2'
+  version: '0.1.8'
+  project: https://github.com/gabrielasuchopar/genens
   params:
     _sample_size: 0.25
     n_gen: 30
