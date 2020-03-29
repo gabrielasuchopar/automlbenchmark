@@ -65,8 +65,8 @@ def run(dataset: Dataset, config: TaskConfig):
     training_params = {k: v for k, v in config.framework_params.items() if not k.startswith('_')}
     n_jobs = config.framework_params.get('_n_jobs', config.cores)  # useful to disable multicore, regardless of the dataset config
 
-    # sample_size = config.framework_params.get('_sample_size', None)
-    sample_size = _heuristic_sample_size(X_train.shape[0], X_train.shape[1])
+    sample_size = config.framework_params.get('_sample_size', None)
+    # sample_size = _heuristic_sample_size(X_train.shape[0], X_train.shape[1])
     if sample_size is not None:
         evaluator = SampleCrossValEvaluator(sample_size=sample_size, per_gen=True, cv_k=5)
     else:
