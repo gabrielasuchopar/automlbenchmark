@@ -170,13 +170,16 @@ def save_artifacts(estimator: Union[GenensClassifier, GenensRegressor], config):
     try:
         artifacts = config.framework_params.get('_save_artifacts', False)
 
-        if 'models' in artifacts:
-            models_dir = os.path.join(make_subdir('models', config))
+        if 'pickle_models' in artifacts:
+            models_dir = os.path.join(make_subdir('pickle_models', config))
 
             # pickle top 3 best pipelines
             for i, pipe in enumerate(estimator.get_best_pipelines()):
                 with open(models_dir + '/pipeline{}.pickle'.format(i), 'wb') as pickle_file:
                     pickle.dump(pipe, pickle_file, pickle.HIGHEST_PROTOCOL)
+
+        if 'models' in artifacts:
+            models_dir = os.path.join(make_subdir('models', config))
 
             # top 3 individual fitness values
             with open(models_dir + '/ind-fitness.txt', 'w+') as out_file:
