@@ -93,7 +93,7 @@ genens:
   version: '0.1.9'
   project: https://github.com/gabrielasuchopar/genens
   params:
-    _sample_size: 0.05
+    _sample_size: 0.25
     n_gen: 30
     timeout: 120
     max_height: 5
