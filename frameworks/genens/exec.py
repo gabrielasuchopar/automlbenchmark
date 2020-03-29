@@ -96,13 +96,13 @@ def run(dataset: Dataset, config: TaskConfig):
     node_config.group_weights['ensemble'] = config.framework_params.get('_ens_weight',
                                                                         node_config.group_weights['ensemble'])
 
-    log_path = config.output_dir + f'/genens_log_{config.name}.txt'
+    #log_path = config.output_dir + f'/genens_log_{config.name}.txt'
     estimator = GenensClassifier if is_classification else GenensRegressor
     genens_est = estimator(n_jobs=n_jobs,
                            config=node_config,
                            max_evo_seconds=runtime_s,
                            scorer=scoring_metric,
-                           log_path=log_path,
+                           #log_path=log_path,
                            # random_state=config.seed,
                            **training_params)
 
