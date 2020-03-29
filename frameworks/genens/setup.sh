@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 HERE=$(dirname "$0")
-. $HERE/../shared/setup.sh $HERE
+. $HERE/../shared/setup.sh
 
+#SUDO apt-get update -y
 SUDO apt-get install -y graphviz libgraphviz-dev
 
 PIP install --upgrade pip
