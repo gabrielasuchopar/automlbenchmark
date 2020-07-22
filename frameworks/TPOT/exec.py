@@ -12,17 +12,13 @@ os.environ['OPENBLAS_NUM_THREADS'] = '1'
 os.environ['MKL_NUM_THREADS'] = '1'
 from tpot import TPOTClassifier, TPOTRegressor
 
-from amlb.benchmark import TaskConfig
-from amlb.data import Dataset
-from amlb.datautils import Encoder, impute
-from amlb.results import save_predictions_to_file
-from amlb.utils import Timer, touch
+from frameworks.shared.callee import call_run, result, output_subdir, utils
 
 
 log = logging.getLogger(__name__)
 
 
-def run(dataset: Dataset, config: TaskConfig):
+def run(dataset, config):
     log.info("\n**** TPOT ****\n")
 
     is_classification = config.type == 'classification'
@@ -35,14 +31,15 @@ def run(dataset: Dataset, config: TaskConfig):
         mae='neg_mean_absolute_error',
         mse='neg_mean_squared_error',
         msle='neg_mean_squared_log_error',
-        r2='r2'
+        r2='r2',
+        rmse='neg_mean_squared_error',  # TPOT can score on mse, as app computes rmse independently on predictions
     )
     scoring_metric = metrics_mapping[config.metric] if config.metric in metrics_mapping else None
     if scoring_metric is None:
         raise ValueError("Performance metric {} not supported.".format(config.metric))
 
-    X_train, X_test = impute(dataset.train.X_enc, dataset.test.X_enc)
-    y_train, y_test = dataset.train.y_enc, dataset.test.y_enc
+    X_train = dataset.train.X_enc
+    y_train = dataset.train.y_enc
 
     training_params = {k: v for k, v in config.framework_params.items() if not k.startswith('_')}
     n_jobs = config.framework_params.get('_n_jobs', config.cores)  # useful to disable multicore, regardless of the dataset config
@@ -62,37 +59,28 @@ def run(dataset: Dataset, config: TaskConfig):
                      random_state=config.seed,
                      **training_params)
 
-    with Timer() as training:
+    with utils.Timer() as training:
         tpot.fit(X_train, y_train)
 
     log.info('Predicting on the test set.')
+    X_test = dataset.test.X_enc
+    y_test = dataset.test.y_enc
     predictions = tpot.predict(X_test)
     try:
         probabilities = tpot.predict_proba(X_test) if is_classification else None
     except RuntimeError:
         # TPOT throws a RuntimeError if the optimized pipeline does not support `predict_proba`.
-        target_values_enc = dataset.target.label_encoder.transform(dataset.target.values)
-        probabilities = Encoder('one-hot', target=False, encoded_type=float).fit(target_values_enc).transform(predictions)
-
-    save_predictions_to_file(dataset=dataset,
-                             output_file=config.output_predictions_file,
-                             probabilities=probabilities,
-                             predictions=predictions,
-                             truth=y_test,
-                             target_is_encoded=is_classification)
+        probabilities = "predictions"  # encoding is handled by caller in `__init__.py`
 
     save_artifacts(tpot, config)
 
-    return dict(
-        models_count=len(tpot.evaluated_individuals_),
-        training_duration=training.duration
-    )
-
-
-def make_subdir(name, config):
-    subdir = os.path.join(config.output_dir, name, config.name, str(config.fold))
-    touch(subdir, as_dir=True)
-    return subdir
+    return result(output_file=config.output_predictions_file,
+                  predictions=predictions,
+                  truth=y_test,
+                  probabilities=probabilities,
+                  target_is_encoded=is_classification,
+                  models_count=len(tpot.evaluated_individuals_),
+                  training_duration=training.duration)
 
 
 def save_artifacts(estimator, config):
@@ -102,7 +90,7 @@ def save_artifacts(estimator, config):
         hall_of_fame = list(zip(reversed(estimator._pareto_front.keys), estimator._pareto_front.items))
         artifacts = config.framework_params.get('_save_artifacts', False)
         if 'models' in artifacts:
-            models_file = os.path.join(make_subdir('models', config), 'models.txt')
+            models_file = os.path.join(output_subdir('models', config), 'models.txt')
             with open(models_file, 'w') as f:
                 for m in hall_of_fame:
                     pprint.pprint(dict(
@@ -110,5 +98,9 @@ def save_artifacts(estimator, config):
                         model=str(m[1]),
                         pipeline=models[str(m[1])],
                     ), stream=f)
-    except:
+    except Exception:
         log.debug("Error when saving artifacts.", exc_info=True)
+
+
+if __name__ == '__main__':
+    call_run(run)

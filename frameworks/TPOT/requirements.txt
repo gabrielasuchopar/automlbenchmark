@@ -1,2 +1,0 @@
-tpot[dask]==0.9.6
-xgboost

@@ -2,20 +2,15 @@ import functools as ft
 import logging
 import os
 import signal
-import sys
 import tempfile as tmp
 
-from amlb.benchmark import TaskConfig
-from amlb.data import Dataset
-from amlb.datautils import Encoder, impute
-from amlb.results import save_predictions_to_file
-from amlb.utils import InterruptTimeout, Timer, dir_of, kill_proc_tree
+from utils import InterruptTimeout, Timer, dir_of, kill_proc_tree
+from frameworks.shared.callee import call_run, result
 
 os.environ['JOBLIB_TEMP_FOLDER'] = tmp.gettempdir()
 os.environ['OMP_NUM_THREADS'] = '1'
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
 os.environ['MKL_NUM_THREADS'] = '1'
-sys.path.append("{}/lib/hyperopt-sklearn".format(dir_of(__file__)))
 from hpsklearn import HyperoptEstimator, any_classifier, any_regressor
 from hyperopt import tpe
 from sklearn.metrics import accuracy_score, roc_auc_score, f1_score, log_loss, mean_absolute_error, mean_squared_error, mean_squared_log_error, r2_score
@@ -23,7 +18,7 @@ from sklearn.metrics import accuracy_score, roc_auc_score, f1_score, log_loss, m
 log = logging.getLogger(__name__)
 
 
-def run(dataset: Dataset, config: TaskConfig):
+def run(dataset, config):
     log.info("\n**** Hyperopt-sklearn ****\n")
 
     is_classification = config.type == 'classification'
@@ -38,6 +33,7 @@ def run(dataset: Dataset, config: TaskConfig):
         mse=(mean_squared_error, False),
         msle=(mean_squared_log_error, False),
         r2=(default, False), # lambda y, pred: 1.0 - r2_score(y, pred)
+        rmse=(mean_squared_error, False),
     )
     loss_fn, continuous_loss_fn = metrics_to_loss_mapping[config.metric] if config.metric in metrics_to_loss_mapping else (None, False)
     if loss_fn is None:
@@ -52,8 +48,8 @@ def run(dataset: Dataset, config: TaskConfig):
     log.info("Running hyperopt-sklearn with a maximum time of %ss on %s cores, optimizing %s.",
              config.max_runtime_seconds, 'all', config.metric)
 
-    X_train, X_test = impute(dataset.train.X_enc, dataset.test.X_enc)
-    y_train, y_test = dataset.train.y_enc, dataset.test.y_enc
+    X_train = dataset.train.X_enc
+    y_train = dataset.train.y_enc
 
     if is_classification:
         classifier = any_classifier('clf')
@@ -76,22 +72,24 @@ def run(dataset: Dataset, config: TaskConfig):
             with Timer() as training:
                 estimator.fit(X_train, y_train)
 
+    log.info('Predicting on the test set.')
+    X_test = dataset.test.X_enc
+    y_test = dataset.test.y_enc
     predictions = estimator.predict(X_test)
 
     if is_classification:
-        target_values_enc = dataset.target.label_encoder.transform(dataset.target.values)
-        probabilities = Encoder('one-hot', target=False, encoded_type=float).fit(target_values_enc).transform(predictions)
+        probabilities = "predictions"  # encoding is handled by caller in `__init__.py`
     else:
         probabilities = None
 
-    save_predictions_to_file(dataset=dataset,
-                             output_file=config.output_predictions_file,
-                             probabilities=probabilities,
-                             predictions=predictions,
-                             truth=y_test,
-                             target_is_encoded=True)
+    return result(output_file=config.output_predictions_file,
+                  predictions=predictions,
+                  truth=y_test,
+                  probabilities=probabilities,
+                  target_is_encoded=is_classification,
+                  models_count=len(estimator.trials),
+                  training_duration=training.duration)
 
-    return dict(
-        models_count=len(estimator.trials),
-        training_duration=training.duration
-    )
+
+if __name__ == '__main__':
+    call_run(run)

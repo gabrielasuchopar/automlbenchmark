@@ -22,7 +22,7 @@ class Namespace:
             try:
                 if isinstance(v, str):
                     v = literal_eval(v)
-            except:
+            except Exception:
                 pass
             parsed[k] = v
         sublevel = {}
@@ -127,6 +127,12 @@ class Namespace:
 
     def __dir__(self):
         return list(self.__dict__.keys())
+
+    def __eq__(self, other):
+        return isinstance(other, Namespace) and self.__dict__ == other.__dict__
+
+    def __hash__(self):
+        return hash(self.__dict__)
 
     def __str__(self):
         return Namespace.printer.pformat(Namespace.dict(self))

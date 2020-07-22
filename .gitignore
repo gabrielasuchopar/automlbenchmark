@@ -28,7 +28,17 @@ _site/
 *.log
 *.csv
 *.arff
+
+# binary files
+*.zip
+*.tgz
+*.gz
+*.bz2
 *.png
+
+# Singurality files
+Singularityfile
+*.sif
 
 #whitelist
 !reports/**/*.csv

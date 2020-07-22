@@ -82,9 +82,8 @@ _Example:_
 
 In the definition below, the `n_estimators` and `verbose` params are passed directly to the `RandomForestClassifier`
 ```yaml
-RandomForest:
-  version: '0.21.3'
-  project: http://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html
+RandomForest_custom:
+  extends: RandomForest
   params:
     n_estimators: 2000
     verbose: true
@@ -96,9 +95,8 @@ _Example:_
  
 In the definition below, the `_n_jobs` param is handled by custom code in `RandomForest/exec.py`: here it overrides the default `n_jobs` automatically calculated by the application (using all assigned cores).
 ```yaml
-RandomForest:
-  version: '0.21.3'
-  project: http://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html
+RandomForest_custom:
+  extends: RandomForest
   params:
     n_estimators: 2000
     _n_jobs: 1
@@ -312,7 +310,7 @@ Adding an AutoML framework consist in several steps:
 ### Framework definition
 
 The framework definition consists in an entry in a `yaml` file with the framework name and some properties
- 1. to describe the framework: `project`, `version`.
+ 1. to describe the framework and define which version will be used: `project`, `version`.
  1. to indicate the Python module with the integration code: `module` or `extends`.
  1. to pass optional parameters to the framework and/or the integration code: `params`.
  
@@ -344,15 +342,25 @@ Stacking:
 #    _final_params: {penalty: elasticnet, loss: log} # sgd linear
     _final_params: {max_iter: 1000}  # logistic/linear
 
+autosklearn_latest:
+  extends: autosklearn
+  version: latest
+  description: "this will use master branch from the autosklearn repository instead of the fixed version"
+
+autosklearn_mybranch:
+  extends: autosklearn
+  version: mybranch
+  description: "this will use mybranch branch from the autosklearn repository instead of the fixed version"
+
+autosklearn_oldgen:
+  extends: autosklearn
+  version: "0.7.1"
+  description: "this will use the latest autosklearn version from the old generation"
+
 H2OAutoML_nightly:
   module: frameworks.H2OAutoML
   setup_cmd: 'LATEST_H2O=`curl http://h2o-release.s3.amazonaws.com/h2o/master/latest` && pip install --no-cache-dir -U "http://h2o-release.s3.amazonaws.com/h2o/master/${{LATEST_H2O}}/Python/h2o-3.29.0.${{LATEST_H2O}}-py2.py3-none-any.whl"'
   version: 'nightly'
-
-H2OAutoML_blending:
-  extends: H2OAutoML
-  params:
-    nfolds: 0
 
 H2OAutoML_custom:
   extends: H2OAutoML
@@ -437,7 +445,7 @@ Please note however, that this structure is not a requirement, the only requirem
 A simple `__init__.py` would look like this:
 
 ```python
-from amlb.utils import as_cmd_args, call_script_in_same_dir, dir_of
+from amlb.utils import call_script_in_same_dir
 
 
 def setup(*args, **kwargs):
@@ -447,17 +455,6 @@ def setup(*args, **kwargs):
 def run(*args, **kwargs):
     from .exec import run
     return run(*args, **kwargs)
-
-
-def docker_commands(*args, **kwargs):
-    return """
-RUN {here}/setup.sh {args}
-""".format(
-        here=dir_of(__file__, True),
-        args=' '.join(as_cmd_args(*args)),
-    )
-
-__all__ = (setup, run, docker_commands)
 
 ```
 
@@ -565,6 +562,33 @@ Here are the main differences:
   Here, the `exec.R` script is also responsible to save the predictions in the expected format.
 
 #### Add a default framework
+
+Is called "default framework" an AutoML framework whose integration is available on `master` branch under the `frameworks` folder, and with a simple definition in `resources/frameworks.yaml`.  
+
+*NOTE:*
+There are a few requirements when integrating a new default framework:
+- The code snippet triggering the training should use only defaults (no AutoML hyper parameters), plus possibly a generic `**kwargs` in order to support `params` section in custom framework definitions.  In other words, one of the requirements for being included in the benchmark is that the framework is submitted without any tweaks to default settings.  This is to prevent submissions (systems) from overfitting or tuning to the benchmark.
+- There must be a way to limit the runtime of the algorithm (a maximum runtime parameter).
+- Exceptions:
+  - the problem type ("classification", "regression", "binary", "multiclass"): this is available through `config.type` or `dataset.type`. 
+  - information about data, for example the column types: available through the `dataset` object.
+  - time, cpu and memory constraints: those must be provided by the benchmark application through the `config` object.  
+  - the objective function: provided by `config.metric` (usually requires a translation for a given framework).
+  - seed: provided by `config.seed`
+  - paths to folders (output, temporary...): if possible, use `config.output_dir` or a subfolder (see existing integrations).
+- The default framework definition in `resources/frameworks.yaml` shouldn't have any `params` section: this `params` section is intended for custom definitions, not default ones.
+```yaml
+good_framework:
+   version: "0.0.1"
+   project: "http://go.to/good_framework"
+
+bad_framework:
+   version: "0.0.1"
+   project: "http://go.to/bad_framework"
+   params: 
+     enable_this: true
+     use: ['this', 'that']
+```
 
 Using the instructions above:
  1. verify that there is an issue created under <https://github.com/openml/automlbenchmark/issues> for the framework you want to add, or create one.

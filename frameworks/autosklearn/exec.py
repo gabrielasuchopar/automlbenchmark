@@ -8,18 +8,17 @@ os.environ['JOBLIB_TEMP_FOLDER'] = tmp.gettempdir()
 os.environ['OMP_NUM_THREADS'] = '1'
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
 os.environ['MKL_NUM_THREADS'] = '1'
+import autosklearn
 from autosklearn.estimators import AutoSklearnClassifier, AutoSklearnRegressor
 import autosklearn.metrics as metrics
+from packaging import version
 
-from amlb.benchmark import TaskConfig
-from amlb.data import Dataset
-from amlb.results import save_predictions_to_file
-from amlb.utils import Timer, system_memory_mb, touch
+from frameworks.shared.callee import call_run, result, output_subdir, utils
 
 log = logging.getLogger(__name__)
 
 
-def run(dataset: Dataset, config: TaskConfig):
+def run(dataset, config):
     log.info("\n**** AutoSklearn ****\n")
     warnings.simplefilter(action='ignore', category=FutureWarning)
     warnings.simplefilter(action='ignore', category=DeprecationWarning)
@@ -34,6 +33,7 @@ def run(dataset: Dataset, config: TaskConfig):
         logloss=metrics.log_loss,
         mae=metrics.mean_absolute_error,
         mse=metrics.mean_squared_error,
+        rmse=metrics.mean_squared_error,  # autosklearn can optimize on mse, and we compute rmse independently on predictions
         r2=metrics.r2
     )
     perf_metric = metrics_mapping[config.metric] if config.metric in metrics_mapping else None
@@ -48,8 +48,9 @@ def run(dataset: Dataset, config: TaskConfig):
 
     X_train = dataset.train.X_enc
     y_train = dataset.train.y_enc
+    predictors_type = dataset.predictors_type
+    log.debug("predictors_type=%s", predictors_type)
     # log.info("finite=%s", np.isfinite(X_train))
-    predictors_type = ['Categorical' if p.is_categorical() else 'Numerical' for p in dataset.predictors]
 
     training_params = {k: v for k, v in config.framework_params.items() if not k.startswith('_')}
 
@@ -59,7 +60,7 @@ def run(dataset: Dataset, config: TaskConfig):
 
     # when memory is large enough, we should have:
     # (cores - 1) * ml_memory_limit_mb + ensemble_memory_limit_mb = config.max_mem_size_mb
-    total_memory_mb = system_memory_mb().total
+    total_memory_mb = utils.system_memory_mb().total
     if ml_memory_limit == 'auto':
         ml_memory_limit = max(min(config.max_mem_size_mb,
                                   math.ceil(total_memory_mb / n_jobs)),
@@ -73,41 +74,40 @@ def run(dataset: Dataset, config: TaskConfig):
     log.warning("Using meta-learned initialization, which might be bad (leakage).")
     # TODO: do we need to set per_run_time_limit too?
     estimator = AutoSklearnClassifier if is_classification else AutoSklearnRegressor
+
+    if version.parse(autosklearn.__version__) >= version.parse("0.8"):
+        constr_extra_params = dict(metric=perf_metric)
+        fit_extra_params = {}
+    else:
+        constr_extra_params = {}
+        fit_extra_params = dict(metric=perf_metric)
+
     auto_sklearn = estimator(time_left_for_this_task=config.max_runtime_seconds,
                              n_jobs=n_jobs,
                              ml_memory_limit=ml_memory_limit,
                              ensemble_memory_limit=ensemble_memory_limit,
                              seed=config.seed,
+                             **constr_extra_params,
                              **training_params)
-    with Timer() as training:
-        auto_sklearn.fit(X_train, y_train, metric=perf_metric, feat_type=predictors_type)
+    with utils.Timer() as training:
+        auto_sklearn.fit(X_train, y_train, feat_type=predictors_type, **fit_extra_params)
 
     # Convert output to strings for classification
     log.info("Predicting on the test set.")
-    X_test= dataset.test.X_enc
+    X_test = dataset.test.X_enc
     y_test = dataset.test.y_enc
     predictions = auto_sklearn.predict(X_test)
     probabilities = auto_sklearn.predict_proba(X_test) if is_classification else None
 
-    save_predictions_to_file(dataset=dataset,
-                             output_file=config.output_predictions_file,
-                             probabilities=probabilities,
-                             predictions=predictions,
-                             truth=y_test,
-                             target_is_encoded=True)
-
     save_artifacts(auto_sklearn, config)
 
-    return dict(
-        models_count=len(auto_sklearn.get_models_with_weights()),
-        training_duration=training.duration
-    )
-
-
-def make_subdir(name, config):
-    subdir = os.path.join(config.output_dir, name, config.name, str(config.fold))
-    touch(subdir, as_dir=True)
-    return subdir
+    return result(output_file=config.output_predictions_file,
+                  predictions=predictions,
+                  truth=y_test,
+                  probabilities=probabilities,
+                  target_is_encoded=is_classification,
+                  models_count=len(auto_sklearn.get_models_with_weights()),
+                  training_duration=training.duration)
 
 
 def save_artifacts(estimator, config):
@@ -116,8 +116,12 @@ def save_artifacts(estimator, config):
         log.debug("Trained Ensemble:\n%s", models_repr)
         artifacts = config.framework_params.get('_save_artifacts', [])
         if 'models' in artifacts:
-            models_file = os.path.join(make_subdir('models', config), 'models.txt')
+            models_file = os.path.join(output_subdir('models', config), 'models.txt')
             with open(models_file, 'w') as f:
                 f.write(models_repr)
-    except:
+    except Exception:
         log.debug("Error when saving artifacts.", exc_info=True)
+
+
+if __name__ == '__main__':
+    call_run(run)

@@ -118,7 +118,8 @@ class Resources:
                         later.append(framework)
                         continue
                     else:
-                        framework % parent  # adds framework's missing keys from parent
+                        framework.parent = parent
+                        framework % copy.deepcopy(parent)  # adds framework's missing keys from parent
                 self._validate_framework(framework)
                 validated.append(framework)
             to_validate = later
@@ -208,8 +209,13 @@ class Resources:
         if framework['module'] is None:
             framework.module = '.'.join([self.config.frameworks.root_module, framework.name])
 
+        if framework['version'] is None:
+            framework.version = 'latest'
+
         if framework['setup_args'] is None:
-            framework.setup_args = None
+            framework.setup_args = [framework.version] if framework['repo'] is None else [framework.version, framework.repo]
+        elif isinstance(framework.setup_args, str):
+            framework.setup_args = [framework.setup_args]
 
         if framework['setup_script'] is None:
             framework.setup_script = None
@@ -224,8 +230,8 @@ class Resources:
             if isinstance(framework.setup_cmd, str):
                 framework.setup_cmd = [framework.setup_cmd]
             framework.setup_cmd = [cmd.format(**self._common_dirs,
-                                              **dict(pip="PIP",
-                                                     py="PY"))
+                                              **dict(pip="{pip}",
+                                                     py="{py}"))
                                    for cmd in framework.setup_cmd]
 
         if framework['params'] is None:
@@ -233,19 +239,16 @@ class Resources:
         else:
             framework.params = Namespace.dict(framework.params)
 
-        if framework['version'] is None:
-            framework.version = 'latest'
-
         did = copy.copy(self.config.docker.image_defaults)
-        if framework['docker_image'] is None:
-            framework['docker_image'] = did
+        if framework['image'] is None:
+            framework['image'] = did
         for conf in ['author', 'image', 'tag']:
-            if framework.docker_image[conf] is None:
-                framework.docker_image[conf] = did[conf]
-        if framework.docker_image.image is None:
-            framework.docker_image.image = framework.name.lower()
-        if framework.docker_image.tag is None:
-            framework.docker_image.tag = framework.version.lower()
+            if framework.image[conf] is None:
+                framework.image[conf] = did[conf]
+        if framework.image.image is None:
+            framework.image.image = framework.name.lower()
+        if framework.image.tag is None:
+            framework.image.tag = framework.version.lower()
 
     def _validate_task(self, task, lenient=False):
         missing = []

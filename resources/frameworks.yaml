@@ -8,7 +8,7 @@ __dummy_framework_with_defaults:
   setup_args: ''
   params: {}
   project: http://url/to/project/repo
-  docker_image: # will result in built docker image `author/image:tag`
+  image: # will result in built image `author/image:tag`
     author: automlbenchmark
     image:  # defaults to `framework name to lowercase`
     tag:  # defaults to `framework version`
@@ -16,7 +16,7 @@ __dummy_framework_with_defaults:
 
 ### Non AutoML reference frameworks
 constantpredictor:
-  version: '0.19.2'
+  version: 'latest'
   project: https://scikit-learn.org/stable/modules/generated/sklearn.dummy.DummyClassifier.html
 
 constantpredictor_enc:
@@ -25,11 +25,11 @@ constantpredictor_enc:
     encode: true
 
 DecisionTree:
-  version: '0.19.2'
+  version: '0.22.2'
   project: https://scikit-learn.org/stable/modules/generated/sklearn.tree.DecisionTreeClassifier.html
 
 RandomForest:
-  version: '0.21.3'
+  version: '0.22.2'
   project: http://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html
   params:
     n_estimators: 2000
@@ -37,7 +37,7 @@ RandomForest:
 #    verbose: true
 
 TunedRandomForest:
-  version: '0.19.2'
+  version: '0.22.2'
   project: http://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html
   params:
     n_estimators: 2000
@@ -46,22 +46,46 @@ TunedRandomForest:
 #      n_estimators: 500
 
 ### AutoML frameworks
+AutoGluon:
+  version: "0.0.12"
+  project: https://autogluon.mxnet.io
+#  params:
+#    _save_artifacts: ['leaderboard', 'models', 'info']
+
+AutoGluon_best:
+  extends: AutoGluon
+  description: "provides the most accurate overall predictor"
+  params:
+    presets: best_quality
+
 autosklearn:
-  version: '0.5.1'
-  project: https://automl.github.io/auto-sklearn/stable/
+  version: '0.8.0'
+  project: https://automl.github.io/auto-sklearn/
+#  params:
+#    _save_artifacts: ['models']
+#    _n_jobs: 1
 
 AutoWEKA:
   version: '2.6'
   project: https://www.cs.ubc.ca/labs/beta/Projects/autoweka/
 
+autoxgboost:
+  version: 'latest'
+  project: https://github.com/ja-thomas/autoxgboost
+
+GAMA:
+  version: '20.1.0'
+  project: https://github.com/PGijsbers/gama
+
 H2OAutoML:
-  version: '3.26.0.11'
+  version: '3.30.0.4'
+  setup_args: 'zahradnik'
   project: http://docs.h2o.ai/h2o/latest-stable/h2o-docs/automl.html
 #  params:
 #    _save_artifacts: ['leaderboard', 'logs', 'models', 'models_predictions', 'mojos']
 
 hyperoptsklearn:
-  version: '0.0.3'
+  version: 'latest'
   project: http://hyperopt.github.io/hyperopt-sklearn/
   params:
     max_evals: 1000
@@ -76,15 +100,12 @@ oboe:
 #    verbose: true
 
 ranger:
-  version: '0.10.1'
+  version: 'latest'
   project: https://github.com/imbs-hl/ranger
 
 TPOT:
-  version: '0.9.6'
+  version: '0.11.5'
   project: https://github.com/EpistasisLab/tpot
-  params:
-    subsample: 0.25
-    #_save_artifacts: []
 #    max_eval_time_mins: 2
 #    population_size: 25
 #    verbosity: 2
@@ -110,3 +131,8 @@ genens:
 autoxgboost:
   version: '0.0.0.9000'
   project: https://github.com/ja-thomas/autoxgboost
+#  params:
+#    _save_artifacts: ['models']
+#    max_eval_time_mins: 2
+#    population_size: 25
+#    verbosity: 2
