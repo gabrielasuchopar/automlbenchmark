@@ -127,12 +127,3 @@ genens:
     mut_multiple_args: false
     _ens_weight: 2.0
     _save_artifacts: ['log', 'models']
-
-autoxgboost:
-  version: '0.0.0.9000'
-  project: https://github.com/ja-thomas/autoxgboost
-#  params:
-#    _save_artifacts: ['models']
-#    max_eval_time_mins: 2
-#    population_size: 25
-#    verbosity: 2
