@@ -111,19 +111,12 @@ TPOT:
 #    verbosity: 2
 
 genens:
-  version: '0.1.9'
+  version: '0.1.15'
   project: https://github.com/gabrielasuchopar/genens
   params:
     _sample_size: 0.25
     n_gen: 30
     timeout: 120
-    max_height: 5
-    max_arity: 3
-    hc_repeat: 3
-    hc_n_nodes: 3
-    hc_keep_last: false
-    hc_mut_pb: 0.2
     pop_size: 52
-    mut_multiple_args: false
-    _ens_weight: 2.0
+    disable_logging: False
     _save_artifacts: ['log', 'models']
