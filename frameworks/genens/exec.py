@@ -148,7 +148,11 @@ def save_artifacts(estimator: Union[GenensClassifier, GenensRegressor], config):
                 for i, ind in enumerate(best_inds):
                     out_file.write('Individual {}: Score {}\n'.format(i, ind.fitness.values))
                     # individual tree
-                    create_graph(ind, models_dir + '/graph{}.png'.format(i))
+
+        if 'models_png' in artifacts:
+            models_dir = os.path.join(output_subdir('models', config))
+            for i, ind in enumerate(best_inds):
+                create_graph(ind, models_dir + '/graph{}.png'.format(i))
 
         if 'log' in artifacts:
             log_dir = os.path.join(output_subdir('logs', config))
