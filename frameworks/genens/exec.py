@@ -6,7 +6,6 @@ import random
 import sys
 import tempfile as tmp
 
-from genens.render.graph import create_graph
 from genens.render.plot import export_plot
 from genens.workflow.evaluate import SampleCrossValEvaluator, CrossValEvaluator
 
@@ -150,6 +149,8 @@ def save_artifacts(estimator: Union[GenensClassifier, GenensRegressor], config):
                     # individual tree
 
         if 'models_png' in artifacts:
+            from genens.render.graph import create_graph
+
             models_dir = os.path.join(output_subdir('models', config))
             for i, ind in enumerate(best_inds):
                 create_graph(ind, models_dir + '/graph{}.png'.format(i))
